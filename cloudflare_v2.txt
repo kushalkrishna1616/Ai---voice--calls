@@ -1,0 +1,37 @@
+2026-04-03T17:21:05Z INF Thank you for trying Cloudflare Tunnel. Doing so, without a Cloudflare account, is a quick way to experiment and try it out. However, be aware that these account-less Tunnels have no uptime guarantee, are subject to the Cloudflare Online Services Terms of Use (https://www.cloudflare.com/website-terms/), and Cloudflare reserves the right to investigate your use of Tunnels for violations of such terms. If you intend to use Tunnels in production you should use a pre-created named tunnel by following: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps
+2026-04-03T17:21:05Z INF Requesting new quick Tunnel on trycloudflare.com...
+2026-04-03T17:21:10Z INF +--------------------------------------------------------------------------------------------+
+2026-04-03T17:21:10Z INF |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
+2026-04-03T17:21:10Z INF |  https://sun-van-personals-hobbies.trycloudflare.com                                       |
+2026-04-03T17:21:10Z INF +--------------------------------------------------------------------------------------------+
+2026-04-03T17:21:10Z INF Cannot determine default configuration path. No file [config.yml config.yaml] in [~/.cloudflared ~/.cloudflare-warp ~/cloudflare-warp]
+2026-04-03T17:21:10Z INF Version 2026.3.0 (Checksum 59b12880b24af581cf5b1013db601c7d843b9b097e9c78aa5957c7f39f741885)
+2026-04-03T17:21:10Z INF GOOS: windows, GOVersion: go1.24.13, GoArch: amd64
+2026-04-03T17:21:10Z INF Settings: map[ha-connections:1 p:http2 protocol:http2 url:http://localhost:5000]
+2026-04-03T17:21:10Z INF cloudflared will not automatically update on Windows systems.
+2026-04-03T17:21:10Z INF Generated Connector ID: 5defe9f0-ee16-449a-adf5-3f74781b44be
+2026-04-03T17:21:10Z INF Initial protocol http2
+2026-04-03T17:21:10Z INF ICMP proxy will use 10.48.121.37 as source for IPv4
+2026-04-03T17:21:10Z INF ICMP proxy will use 2401:4900:4de6:abc5:c941:4d52:f608:5383 in zone Wi-Fi as source for IPv6
+2026-04-03T17:21:10Z INF cloudflared does not support loading the system root certificate pool on Windows. Please use --origin-ca-pool <PATH> to specify the path to the certificate pool
+2026-04-03T17:21:10Z INF ICMP proxy will use 10.48.121.37 as source for IPv4
+2026-04-03T17:21:10Z INF ICMP proxy will use 2401:4900:4de6:abc5:c941:4d52:f608:5383 in zone Wi-Fi as source for IPv6
+2026-04-03T17:21:10Z INF Starting metrics server on 127.0.0.1:20243/metrics
+2026-04-03T17:21:10Z ERR failed to serve incoming request error="Unauthorized: Tunnel not found"
+2026-04-03T17:21:11Z ERR Register tunnel error from server side error="Unauthorized: Tunnel not found" connIndex=0 event=0 ip=198.41.200.53
+2026-04-03T17:21:11Z INF Retrying connection in up to 2s connIndex=0 event=0 ip=198.41.200.53
+2026-04-03T17:21:12Z ERR failed to serve incoming request error="Unauthorized: Tunnel not found"
+2026-04-03T17:21:12Z ERR Register tunnel error from server side error="Unauthorized: Tunnel not found" connIndex=0 event=0 ip=198.41.200.53
+2026-04-03T17:21:12Z INF Retrying connection in up to 4s connIndex=0 event=0 ip=198.41.200.53
+2026-04-03T17:21:15Z INF Registered tunnel connection connIndex=0 connection=b6a5dd62-5865-4abc-9bb8-94f9637bdef3 event=0 ip=198.41.200.53 location=del06 protocol=http2
+2026-04-03T17:22:53Z ERR failed to serve incoming request error="Error shutting down control stream: context canceled"
+2026-04-03T17:22:53Z ERR Serve tunnel error error="Error shutting down control stream: context canceled" connIndex=0 event=0 ip=198.41.200.53
+2026-04-03T17:22:53Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.53
+2026-04-03T17:22:53Z ERR Connection terminated error="Error shutting down control stream: context canceled" connIndex=0
+2026-04-03T17:22:56Z INF Registered tunnel connection connIndex=0 connection=e7ffd27e-4092-4a82-b947-5e012c96b068 event=0 ip=198.41.200.53 location=del04 protocol=http2
+2026-04-03T17:26:15Z ERR Failed to refresh DNS local resolver error="lookup region1.v2.argotunnel.com: i/o timeout"
+2026-04-03T17:26:25Z ERR failed to serve incoming request error="Error shutting down control stream: client disconnected"
+2026-04-03T17:26:25Z ERR Serve tunnel error error="Error shutting down control stream: client disconnected" connIndex=0 event=0 ip=198.41.200.53
+2026-04-03T17:26:25Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.53
+2026-04-03T17:26:26Z ERR Connection terminated error="Error shutting down control stream: client disconnected" connIndex=0
+2026-04-03T17:26:42Z INF Registered tunnel connection connIndex=0 connection=e668c76f-c4b6-4db8-ba52-7aad693ea599 event=0 ip=198.41.200.53 location=del06 protocol=http2

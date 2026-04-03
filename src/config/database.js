@@ -7,8 +7,9 @@ const connectDB = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 3000,
       socketTimeoutMS: 45000,
+      bufferCommands: false
     });
 
     logger.info(`MongoDB Connected: ${conn.connection.host}`);

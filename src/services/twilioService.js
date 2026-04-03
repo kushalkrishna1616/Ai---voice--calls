@@ -20,23 +20,28 @@ const VoiceResponse = twilio.twiml.VoiceResponse;
 
 class TwilioService {
   /**
-   * Generate TwiML response for incoming call
+   * Generate TwiML response for incoming call with Absolute URL
    */
-  static generateWelcomeResponse() {
+  static generateWelcomeResponse(baseUrl) {
     const twiml = new VoiceResponse();
     
+    // Safety pause to let connection stabilize
+    twiml.pause({ length: 1 });
+
     twiml.say({
       voice: 'Polly.Joanna',
       language: 'en-US'
-    }, 'Hello! Thank you for calling. How can I assist you today?');
+    }, 'Hello! Thank you for calling Kushal. I am your AI assistant. How can I help you today?');
     
-    // Record the caller's response
+    // Use FULL ABSOLUTE URL for the recording webhook
+    const actionUrl = `${baseUrl}/api/v1/calls/process-recording`;
+
     twiml.record({
       timeout: 5,
       transcribe: false,
       maxLength: 30,
       playBeep: true,
-      action: '/api/v1/calls/process-recording',
+      action: actionUrl,
       method: 'POST'
     });
 
@@ -44,26 +49,31 @@ class TwilioService {
   }
 
   /**
-   * Generate TwiML response with AI-generated speech
+   * Generate TwiML response with AI-generated speech and Absolute URL
    */
-  static generateAIResponse(audioUrl, continueConversation = true) {
+  static generateAIResponse(content, isAudio = true, continueConversation = true, baseUrl) {
     const twiml = new VoiceResponse();
     
-    // Play the AI-generated audio
-    twiml.play(audioUrl);
+    if (isAudio) {
+      twiml.play(content);
+    } else {
+      twiml.say({
+        voice: 'Polly.Joanna',
+        language: 'en-US'
+      }, content);
+    }
     
     if (continueConversation) {
-      // Record next user input
+      const actionUrl = `${baseUrl}/api/v1/calls/process-recording`;
       twiml.record({
         timeout: 5,
         transcribe: false,
         maxLength: 30,
         playBeep: false,
-        action: '/api/v1/calls/process-recording',
+        action: actionUrl,
         method: 'POST'
       });
     } else {
-      // End the call
       twiml.say({
         voice: 'Polly.Joanna'
       }, 'Thank you for calling. Goodbye!');
@@ -74,15 +84,17 @@ class TwilioService {
   }
 
   /**
-   * Generate TwiML to gather user input (alternative to recording)
+   * Generate TwiML to gather speech with Absolute URL
    */
-  static generateGatherResponse(message, continueConversation = true) {
+  static generateGatherResponse(message, continueConversation = true, baseUrl) {
     const twiml = new VoiceResponse();
     
+    const actionUrl = `${baseUrl}/api/v1/calls/process-speech`;
+
     const gather = twiml.gather({
       input: 'speech',
       timeout: 5,
-      action: '/api/v1/calls/process-speech',
+      action: actionUrl,
       method: 'POST',
       speechTimeout: 'auto'
     });
