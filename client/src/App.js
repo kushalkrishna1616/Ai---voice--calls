@@ -7,6 +7,7 @@ import CallDetail from './pages/CallDetail';
 import Transcripts from './pages/Transcripts';
 import TranscriptDetail from './pages/TranscriptDetail';
 import Analytics from './pages/Analytics';
+import WebCall from './pages/WebCall';
 import { SocketProvider } from './context/SocketContext';
 import './App.css';
 
@@ -23,6 +24,7 @@ function App() {
             <Route path="transcripts" element={<Transcripts />} />
             <Route path="transcripts/:id" element={<TranscriptDetail />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="webcall" element={<WebCall />} />
           </Route>
         </Routes>
       </Router>

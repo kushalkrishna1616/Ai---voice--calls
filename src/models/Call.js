@@ -29,14 +29,20 @@ const callSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
+  type: {
+    type: String,
+    enum: ['telephony', 'web'],
+    default: 'telephony',
+    index: true
+  },
   callerNumber: {
     type: String,
-    required: true,
+    required: false, // Optional for web calls
     index: true
   },
   recipientNumber: {
     type: String,
-    required: true
+    required: false // Optional for web calls
   },
   status: {
     type: String,

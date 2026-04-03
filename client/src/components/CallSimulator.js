@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { callAPI } from '../services/api';
-import { FiSend, FiX, FiMessageSquare } from 'react-icons/fi';
+import { FiSend, FiX, FiMessageSquare, FiMic, FiMicOff } from 'react-icons/fi';
 
 const CallSimulator = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -8,7 +8,37 @@ const CallSimulator = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [isListening, setIsListening] = useState(false);
   const scrollRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setMessage(transcript);
+        setIsListening(false);
+        // We'll call handleSend manually since setMessage is async and we need the transcript
+        processMessage(transcript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -25,12 +55,24 @@ const CallSimulator = () => {
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleSend = async (e) => {
-    e?.preventDefault();
-    if (!message.trim() || loading) return;
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
 
-    const userMessage = message;
-    setMessage('');
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      window.speechSynthesis.cancel(); // Stop talking if listening
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const processMessage = async (userMessage) => {
+    if (!userMessage.trim() || loading) return;
+
     setLoading(true);
     
     // Add to local history
@@ -53,24 +95,36 @@ const CallSimulator = () => {
       setHistory([...newHistory, { role: 'assistant', content: 'Sorry, I encountered an error. Please check your Grok API key.' }]);
     } finally {
       setLoading(false);
+      setMessage('');
     }
+  };
+
+  const handleSend = (e) => {
+    e?.preventDefault();
+    processMessage(message);
   };
 
   return (
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-8 right-8 bg-blue-600 text-white rounded-full p-4 shadow-xl hover:bg-blue-700 transition-all z-50 flex items-center gap-2"
+        className="fixed bottom-8 right-8 bg-blue-600 text-white rounded-full p-4 shadow-xl hover:bg-blue-700 transition-all z-50 flex items-center gap-2 group"
       >
-        <FiMessageSquare size={24} />
-        <span className="font-semibold">Simulate AI Call</span>
+        <div className="relative">
+          <FiMessageSquare size={24} />
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
+        </div>
+        <span className="font-semibold px-1">Simulate AI Call</span>
       </button>
 
       {isOpen && (
         <div className="fixed bottom-24 right-8 w-96 bg-white rounded-xl shadow-2xl z-50 flex flex-col border border-gray-200 overflow-hidden transform transition-all animate-slide-up">
-          <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
-            <h3 className="font-bold">Grok Call Simulator</h3>
-            <button onClick={() => setIsOpen(false)}><FiX size={20} /></button>
+          <div className="bg-blue-600 p-4 text-white flex justify-between items-center bg-gradient-to-r from-blue-600 to-indigo-700">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <h3 className="font-bold">Grok Voice System</h3>
+            </div>
+            <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-transform"><FiX size={20} /></button>
           </div>
 
           <div 
@@ -79,13 +133,16 @@ const CallSimulator = () => {
           >
             {history.length === 0 && (
               <div className="text-center text-gray-500 mt-10">
-                <p>Click send to start a conversation with your AI brain!</p>
+                <div className="bg-blue-50 p-4 rounded-lg mb-4 text-xs italic">
+                  "Hi! You can type or click the microphone to talk to me. I'll respond instantly with voice."
+                </div>
+                <p>Start a conversation with your AI brain!</p>
               </div>
             )}
             {history.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-3 rounded-lg text-sm shadow-sm ${
-                  msg.role === 'user' ? 'bg-blue-100 text-blue-900 rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-200'
+                <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${
+                  msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
                 }`}>
                   {msg.content}
                 </div>
@@ -93,46 +150,66 @@ const CallSimulator = () => {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce delay-75"></div>
-                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce delay-150"></div>
+                <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                  <div className="flex gap-1.5">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-200 flex gap-2">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type to talk or type 'hello'..."
-              className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-            >
-              <FiSend size={18} />
-            </button>
-          </form>
+          <div className="p-4 bg-white border-t border-gray-200 flex flex-col gap-3">
+             <form onSubmit={handleSend} className="flex gap-2 relative items-center">
+              <button
+                type="button"
+                onClick={toggleListening}
+                className={`p-2 rounded-lg transition-all ${
+                  isListening 
+                  ? 'bg-red-500 text-white animate-pulse' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-red-50'
+                }`}
+                title={isListening ? "Stop listening" : "Start voice chat"}
+              >
+                {isListening ? <FiMicOff size={20} /> : <FiMic size={20} />}
+              </button>
 
-          <div className="p-2 bg-gray-100 text-[10px] text-center text-gray-500 flex justify-center items-center gap-2">
-            <label className="flex items-center gap-1 cursor-pointer hover:text-blue-600 transition-colors">
-              <input 
-                type="checkbox" 
-                checked={audioEnabled} 
-                onChange={(e) => setAudioEnabled(e.target.checked)} 
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder={isListening ? "Listening..." : "Type to talk..."}
+                className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                  isListening ? 'bg-red-50 border-red-200 ring-red-100 ring-2' : ''
+                }`}
+                disabled={loading}
               />
-              Enable Audio Voice
-            </label>
-            <span>|</span>
-            <span>Bypass Twilio Mode (Active)</span>
+              <button
+                type="submit"
+                disabled={loading || !message.trim()}
+                className="bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 transition-all shadow-md active:scale-95"
+              >
+                <FiSend size={18} />
+              </button>
+            </form>
+
+            <div className="text-[10px] text-gray-400 flex justify-between items-center px-1">
+              <label className="flex items-center gap-1.5 cursor-pointer hover:text-blue-600 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={audioEnabled} 
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                  onChange={(e) => setAudioEnabled(e.target.checked)} 
+                />
+                AI Voice Response
+              </label>
+              <div className="flex items-center gap-1 text-green-600 font-medium tracking-tight">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                Web Simulation Active
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -143,7 +220,7 @@ const CallSimulator = () => {
           to { transform: translateY(0); opacity: 1; }
         }
         .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
+          animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
       `}} />
     </>

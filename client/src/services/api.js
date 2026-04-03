@@ -33,7 +33,10 @@ export const callAPI = {
   getCalls: (params) => api.get('/calls', { params }),
   getCall: (id) => api.get(`/calls/${id}`),
   deleteCall: (id) => api.delete(`/calls/${id}`),
-  simulate: (data) => api.post('/calls/simulate', data)
+  simulate: (data) => api.post('/calls/simulate', data),
+  startWebCall: () => api.post('/calls/web/start'),
+  sendWebMessage: (data) => api.post('/calls/web/message', data),
+  endWebCall: (data) => api.post('/calls/web/end', data)
 };
 
 // Transcript API

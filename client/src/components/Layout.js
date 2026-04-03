@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
-import { FiHome, FiPhone, FiFileText, FiBarChart2 } from 'react-icons/fi';
+import { FiHome, FiPhone, FiFileText, FiBarChart2, FiGlobe } from 'react-icons/fi';
 import { useSocket } from '../context/SocketContext';
 
 const Layout = () => {
@@ -34,6 +34,18 @@ const Layout = () => {
           </NavLink>
 
           <NavLink
+            to="/webcall"
+            className={({ isActive }) =>
+              `flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 ${
+                isActive ? 'bg-blue-50 border-r-4 border-blue-500' : ''
+              }`
+            }
+          >
+            <FiGlobe className="mr-3" />
+            Web Call (Live)
+          </NavLink>
+
+          <NavLink
             to="/calls"
             className={({ isActive }) =>
               `flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 ${
@@ -42,7 +54,7 @@ const Layout = () => {
             }
           >
             <FiPhone className="mr-3" />
-            Calls
+            Telephony Logs
           </NavLink>
 
           <NavLink
