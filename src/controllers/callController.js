@@ -193,7 +193,33 @@ class CallController {
     return `${protocol}://${host}`;
   }
 
-  async handleCallStatus(req, res) { res.sendStatus(200); }
+  async handleCallStatus(req, res) {
+    try {
+      const { CallSid, CallStatus, CallDuration } = req.body;
+      logger.info(`📞 STATUS UPDATE: ${CallSid} is now ${CallStatus} (${CallDuration}s)`);
+
+      const updateData = {
+        status: CallStatus,
+        duration: parseInt(CallDuration) || 0
+      };
+
+      if (CallStatus === 'completed') {
+        updateData.endTime = new Date();
+      }
+
+      await Call.findOneAndUpdate({ callSid: CallSid }, updateData);
+      
+      // Cleanup memory session if completed
+      if (['completed', 'failed', 'busy', 'no-answer'].includes(CallStatus)) {
+        memorySessions.delete(CallSid);
+      }
+
+      res.sendStatus(200);
+    } catch (error) {
+      logger.error('Error handling call status:', error.message);
+      res.sendStatus(200); // Always send 200 to Twilio
+    }
+  }
   async getCall(req, res) {
     try {
       const call = await Call.findById(req.params.id);

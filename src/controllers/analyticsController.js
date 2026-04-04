@@ -18,25 +18,53 @@ const getMockStats = () => ({
 // GET /api/v1/analytics/dashboard
 exports.getDashboardStats = async (req, res, next) => {
   try {
-    if (process.env.NODE_ENV === 'development') {
-      return res.status(200).json({ success: true, data: getMockStats() });
-    }
     const stats = await Call.getStatistics(startOfDay(subDays(new Date(), 7)), endOfDay(new Date()));
-    res.status(200).json({ success: true, data: stats[0] });
+    const recentCalls = await Call.find().sort({ createdAt: -1 }).limit(5);
+    
+    const data = {
+      overview: stats[0] || {
+        totalCalls: 0,
+        completedCalls: 0,
+        failedCalls: 0,
+        averageDuration: 0,
+        totalDuration: 0,
+        totalCost: 0
+      },
+      recentCalls
+    };
+
+    res.status(200).json({ success: true, data });
   } catch (error) { next(error); }
 };
 
 // GET /api/v1/analytics/timeseries
 exports.getTimeSeries = async (req, res, next) => {
   try {
-    const trends = [];
-    for (let i = 7; i >= 0; i--) {
-      trends.push({
-        date: subDays(new Date(), i),
-        totalCalls: Math.floor(Math.random() * 10) + 5,
-        completedCalls: Math.floor(Math.random() * 8) + 2
-      });
-    }
+    const trends = await Call.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: subDays(new Date(), 7) }
+        }
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          totalCalls: { $sum: 1 },
+          completedCalls: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          date: "$_id",
+          totalCalls: 1,
+          completedCalls: 1,
+          _id: 0
+        }
+      }
+    ]);
     res.status(200).json({ success: true, data: trends });
   } catch (error) { next(error); }
 };
