@@ -39,8 +39,15 @@ class CallController {
 
       // Store in memory for immediate dev use
       memorySessions.set(CallSid, callData);
-
-      Call.create(callData).catch(() => {});
+      
+      try {
+        const savedCall = await Call.create(callData);
+        callData.callId = savedCall._id;
+        memorySessions.set(CallSid, callData);
+        logger.info(`✅ Call saved to DB: ${savedCall._id}`);
+      } catch (dbError) {
+        logger.error(`❌ Database save failed: ${dbError.message}`);
+      }
 
     } catch (error) {
       res.type('text/xml');
