@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiMic, FiMicOff, FiPhoneOff, FiPhone, FiGlobe } from 'react-icons/fi';
+import { FiMic, FiMicOff, FiPhoneOff, FiPhone } from 'react-icons/fi';
 import { callAPI } from '../services/api';
 
 const WebCall = () => {

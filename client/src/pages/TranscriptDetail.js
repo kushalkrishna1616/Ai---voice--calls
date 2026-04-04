@@ -9,6 +9,7 @@ const TranscriptDetail = () => {
 
   useEffect(() => {
     loadTranscript();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadTranscript = async () => {
