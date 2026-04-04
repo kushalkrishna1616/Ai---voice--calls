@@ -16,9 +16,9 @@ const CallList = () => {
   const loadCalls = async () => {
     try {
       setLoading(true);
-      const data = await callAPI.getCalls({ page, limit: 20 });
-      setCalls(data.data);
-      setPagination(data.pagination);
+      const result = await callAPI.getCalls({ page, limit: 20 });
+      setCalls(result.data || []);
+      setPagination(result.pagination || { page: 1, pages: 1 });
     } catch (error) {
       console.error('Error loading calls:', error);
     } finally {
@@ -54,7 +54,7 @@ const CallList = () => {
             {calls.map((call) => (
               <tr key={call._id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                  {call.callSid.substring(0, 20)}...
+                  {call.callSid ? `${call.callSid.substring(0, 15)}...` : 'N/A'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {call.callerNumber}

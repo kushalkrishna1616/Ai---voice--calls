@@ -215,8 +215,22 @@ class CallController {
 
   async getCalls(req, res) {
     try {
-      const calls = await Call.find().sort({ createdAt: -1 }).limit(10);
-      res.json({ success: true, data: calls });
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+
+      const calls = await Call.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
+      const total = await Call.countDocuments();
+
+      res.json({ 
+        success: true, 
+        data: calls,
+        pagination: {
+          total,
+          page,
+          pages: Math.ceil(total / limit)
+        }
+      });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
