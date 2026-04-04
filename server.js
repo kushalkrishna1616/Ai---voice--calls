@@ -106,12 +106,15 @@ io.on('connection', (socket) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
+  server.close(async () => {
     logger.info('HTTP server closed');
-    mongoose.connection.close(false, () => {
+    try {
+      await mongoose.connection.close();
       logger.info('MongoDB connection closed');
-      process.exit(0);
-    });
+    } catch (err) {
+      logger.error('Error closing MongoDB connection:', err.message);
+    }
+    process.exit(0);
   });
 });
 

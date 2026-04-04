@@ -38,9 +38,10 @@ const transports = [
             };
           };
 
-          return `${timestamp} [${level}]: ${message} ${
-            Object.keys(meta).length ? JSON.stringify(meta, getCircularReplacer(), 2) : ''
-          }`;
+          const metaStr = Object.keys(meta).length && typeof meta === 'object' 
+            ? JSON.stringify(meta, getCircularReplacer()) 
+            : '';
+          return `${timestamp} [${level}]: ${message} ${metaStr}`;
         }
       )
     ),
