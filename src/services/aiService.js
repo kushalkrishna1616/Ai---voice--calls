@@ -79,11 +79,11 @@ Guidelines for Voice Conversations:
       };
 
     } catch (error) {
-      if (error.response) {
-        logger.error('xAI API Error Detail:', JSON.stringify(error.response.data));
+      logger.error(`Groq API Error: ${error.message}`);
+      if (error.response && error.response.data) {
+        logger.error(`Detail: ${JSON.stringify(error.response.data).substring(0, 200)}`);
       }
-      logger.error('Error generating AI response:', error.message);
-      throw new Error('Failed to generate AI response: ' + error.message);
+      throw error;
     }
   }
 
