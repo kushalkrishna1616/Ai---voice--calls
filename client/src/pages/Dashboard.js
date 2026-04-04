@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { analyticsAPI, callAPI } from '../services/api';
+import { analyticsAPI } from '../services/api';
 import { useSocket } from '../context/SocketContext';
 import { FiPhone, FiCheckCircle, FiXCircle, FiClock } from 'react-icons/fi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';

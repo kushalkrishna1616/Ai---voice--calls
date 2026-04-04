@@ -9,6 +9,7 @@ const CallDetail = () => {
 
   useEffect(() => {
     loadCall();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadCall = async () => {

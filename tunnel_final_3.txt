@@ -18,3 +18,10 @@
 2026-04-03T17:47:27Z INF ICMP proxy will use 2401:4900:4de6:abc5:c941:4d52:f608:5383 in zone Wi-Fi as source for IPv6
 2026-04-03T17:47:27Z INF Starting metrics server on 127.0.0.1:20241/metrics
 2026-04-03T17:47:28Z INF Registered tunnel connection connIndex=0 connection=700a05fc-1d5e-43ed-93de-2ba4eb083fb7 event=0 ip=198.41.200.33 location=del04 protocol=http2
+2026-04-03T17:58:45Z INF Initiating graceful shutdown due to signal terminated ...
+2026-04-03T17:58:46Z INF Unregistered tunnel connection connIndex=0 event=0 ip=198.41.200.33
+2026-04-03T17:58:46Z INF Retrying connection in up to 1s connIndex=0 event=0 ip=198.41.200.33
+2026-04-03T17:58:46Z ERR Connection terminated connIndex=0
+2026-04-03T17:58:46Z ERR no more connections active and exiting
+2026-04-03T17:58:46Z INF Tunnel server stopped
+2026-04-03T17:58:46Z INF Metrics server stopped
