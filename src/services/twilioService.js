@@ -28,22 +28,24 @@ class TwilioService {
     // Safety pause to let connection stabilize
     twiml.pause({ length: 1 });
 
-    twiml.say({
-      voice: 'Polly.Joanna',
-      language: 'en-US'
-    }, 'Hello! Thank you for calling Kushal. I am your AI assistant. How can I help you today?');
-    
-    // Use FULL ABSOLUTE URL for the recording webhook
-    const actionUrl = `${baseUrl}/api/v1/calls/process-recording`;
+    const actionUrl = `${baseUrl}/api/v1/calls/process-speech`;
 
-    twiml.record({
+    const gather = twiml.gather({
+      input: 'speech',
       timeout: 5,
-      transcribe: false,
-      maxLength: 30,
-      playBeep: true,
       action: actionUrl,
-      method: 'POST'
+      method: 'POST',
+      speechTimeout: 'auto',
+      language: 'en-IN'
     });
+
+    gather.say({
+      voice: 'Polly.Aditi',
+      language: 'en-IN'
+    }, 'Hello! Thank you for calling Kushal. I am your AI assistant. How can I help you today?');
+
+    // If they don't say anything, redirect back to welcome (or hang up)
+    twiml.redirect(`${baseUrl}/api/v1/calls/webhook`);
 
     return twiml.toString();
   }
@@ -51,29 +53,37 @@ class TwilioService {
   /**
    * Generate TwiML response with AI-generated speech and Absolute URL
    */
-  static generateAIResponse(content, isAudio = true, continueConversation = true, baseUrl) {
+  static generateAIResponse(content, isAudio = false, continueConversation = true, baseUrl) {
     const twiml = new VoiceResponse();
     
     if (isAudio) {
       twiml.play(content);
-    } else {
-      twiml.say({
-        voice: 'Polly.Joanna',
-        language: 'en-US'
-      }, content);
-    }
-    
+    } 
+
     if (continueConversation) {
-      const actionUrl = `${baseUrl}/api/v1/calls/process-recording`;
-      twiml.record({
+      const actionUrl = `${baseUrl}/api/v1/calls/process-speech`;
+      const gather = twiml.gather({
+        input: 'speech',
         timeout: 5,
-        transcribe: false,
-        maxLength: 30,
-        playBeep: false,
         action: actionUrl,
-        method: 'POST'
+        method: 'POST',
+        speechTimeout: 'auto',
+        language: 'en-IN'
       });
+
+      if (!isAudio) {
+        gather.say({
+          voice: 'Polly.Aditi',
+          language: 'en-IN'
+        }, content);
+      }
     } else {
+      if (!isAudio) {
+        twiml.say({
+          voice: 'Polly.Aditi',
+          language: 'en-IN'
+        }, content);
+      }
       twiml.say({
         voice: 'Polly.Joanna'
       }, 'Thank you for calling. Goodbye!');

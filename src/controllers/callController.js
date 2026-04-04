@@ -6,6 +6,9 @@ const aiService = require('../services/aiService');
 const logger = require('../config/logger');
 const { getRedisClient } = require('../config/redis');
 
+// In-memory fallback for Development
+const memorySessions = new Map();
+
 class CallController {
   /**
    * Handle incoming call webhook - ULTRA STABLE
@@ -24,13 +27,20 @@ class CallController {
       res.type('text/xml');
       res.send(twiml);
 
-      // Background Logging
-      Call.create({
+      // Background Logging & Session Init
+      const callData = {
         callSid: CallSid,
         callerNumber: From,
         recipientNumber: To,
-        status: 'in-progress'
-      }).catch(() => {});
+        conversation: [],
+        status: 'in-progress',
+        createdAt: new Date()
+      };
+
+      // Store in memory for immediate dev use
+      memorySessions.set(CallSid, callData);
+
+      Call.create(callData).catch(() => {});
 
     } catch (error) {
       res.type('text/xml');
@@ -56,11 +66,14 @@ class CallController {
       const transcription = await speechToTextService.transcribeAudioFromUrl(audioUrl);
       
       // 2. Generate AI Text Response
-      let callContext;
-      const redisClient = getRedisClient();
-      if (redisClient) {
-          const cached = await redisClient.get(`call:${CallSid}`);
-          if (cached) callContext = JSON.parse(cached);
+      let callContext = memorySessions.get(CallSid);
+
+      if (!callContext) {
+        const redisClient = getRedisClient();
+        if (redisClient) {
+            const cached = await redisClient.get(`call:${CallSid}`);
+            if (cached) callContext = JSON.parse(cached);
+        }
       }
       
       if (!callContext) {
@@ -68,7 +81,10 @@ class CallController {
           if (call) callContext = { callId: call._id, conversation: call.conversation || [] };
       }
 
-      if (!callContext) throw new Error('Session Expired');
+      if (!callContext) {
+        logger.warn(`Session ${CallSid} not found in memory/DB. Initializing new fallback.`);
+        callContext = { conversation: [] };
+      }
 
       const aiResponse = await aiService.generateResponse(callContext.conversation, transcription.text);
       const shouldContinue = !aiService.shouldEndConversation(aiResponse.message);
@@ -83,13 +99,91 @@ class CallController {
       const userMsg = { role: 'user', content: transcription.text, timestamp: new Date() };
       const aiMsg = { role: 'assistant', content: aiResponse.message, timestamp: new Date() };
       callContext.conversation.push(userMsg, aiMsg);
-      Call.findByIdAndUpdate(callContext.callId, { conversation: callContext.conversation }).catch(() => {});
+      
+      // Save back to memory map
+      memorySessions.set(CallSid, callContext);
+
+      if (callContext.callId) {
+        Call.findByIdAndUpdate(callContext.callId, { conversation: callContext.conversation }).catch(() => {});
+      }
 
     } catch (error) {
       logger.error('Stable Response Fallback:', error);
       res.type('text/xml');
       res.send(`<Response><Say>I didn't quite catch that. Can you repeat?</Say><Record action="/api/v1/calls/process-recording"/></Response>`);
     }
+  }
+
+  /**
+   * Process speech results from <Gather> - LOW LATENCY VERSION
+   */
+  async processSpeech(req, res) {
+    try {
+      const { CallSid, SpeechResult, Confidence } = req.body;
+      logger.info(`🚨 SPEECH RECEIVED: "${SpeechResult}" (${Confidence})`);
+
+      if (!SpeechResult) {
+        // No speech detected, prompt again
+        const twiml = twilioService.generateGatherResponse("I'm sorry, I didn't hear anything. Could you please repeat that?", true, this._getBaseUrl(req));
+        res.type('text/xml');
+        return res.send(twiml);
+      }
+
+      const baseUrl = this._getBaseUrl(req);
+      
+      // 1. Context Lookup
+      let callContext = memorySessions.get(CallSid);
+
+      if (!callContext) {
+        const redisClient = getRedisClient();
+        if (redisClient) {
+            const cached = await redisClient.get(`call:${CallSid}`);
+            if (cached) callContext = JSON.parse(cached);
+        }
+      }
+      
+      if (!callContext) {
+          const call = await Call.findOne({ callSid: CallSid });
+          if (call) callContext = { callId: call._id, conversation: call.conversation || [] };
+      }
+
+      if (!callContext) {
+        logger.warn(`Session ${CallSid} not found in processSpeech. Initializing fallback.`);
+        callContext = { conversation: [] };
+      }
+
+      // 2. Generate AI Response
+      const aiResponse = await aiService.generateResponse(callContext.conversation, SpeechResult);
+      const shouldContinue = !aiService.shouldEndConversation(aiResponse.message);
+
+      // 3. Send back Gather TwiML
+      const twiml = twilioService.generateGatherResponse(aiResponse.message, shouldContinue, baseUrl);
+      res.type('text/xml');
+      res.send(twiml);
+
+      // 4. Background History Save
+      const userMsg = { role: 'user', content: SpeechResult, timestamp: new Date() };
+      const aiMsg = { role: 'assistant', content: aiResponse.message, timestamp: new Date() };
+      callContext.conversation.push(userMsg, aiMsg);
+      
+      // Save back to memory map
+      memorySessions.set(CallSid, callContext);
+
+      if (callContext.callId) {
+        Call.findByIdAndUpdate(callContext.callId, { conversation: callContext.conversation }).catch(() => {});
+      }
+
+    } catch (error) {
+      logger.error('Process Speech Error:', error);
+      res.type('text/xml');
+      res.send(`<Response><Say>Connection glitch. One moment.</Say><Gather input="speech" action="/api/v1/calls/process-speech"><Say>Please try again.</Say></Gather></Response>`);
+    }
+  }
+
+  _getBaseUrl(req) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    return `${protocol}://${host}`;
   }
 
   async handleCallStatus(req, res) { res.sendStatus(200); }

@@ -8,6 +8,7 @@ const webCallController = require('../controllers/webCallController');
 // Twilio webhook endpoints
 router.post('/webhook', callController.handleIncomingCall.bind(callController));
 router.post('/process-recording', callController.processRecording.bind(callController));
+router.post('/process-speech', callController.processSpeech.bind(callController));
 router.post('/status', callController.handleCallStatus.bind(callController));
 
 // Simulation endpoint

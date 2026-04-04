@@ -1,17 +1,18 @@
-const axios = require('axios');
-const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
+const Groq = require('groq-sdk');
 const logger = require('../config/logger');
 
 class SpeechToTextService {
   constructor() {
-    this.apiKey = process.env.OPENAI_API_KEY;
-    this.baseURL = 'https://api.openai.com/v1';
+    this.groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY
+    });
   }
 
   /**
-   * Transcribe audio file using OpenAI Whisper
+   * Transcribe audio file using Groq Whisper (Ultra Low Latency)
    */
   async transcribeAudio(audioFilePath, options = {}) {
     try {
@@ -26,46 +27,29 @@ class SpeechToTextService {
         throw new Error(`Audio file not found: ${audioFilePath}`);
       }
 
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', fs.createReadStream(audioFilePath));
-      formData.append('model', 'whisper-1');
-      
-      if (language) {
-        formData.append('language', language);
-      }
-      
-      if (prompt) {
-        formData.append('prompt', prompt);
-      }
-      
-      formData.append('temperature', temperature);
+      logger.info(`Starting Groq transcription for: ${path.basename(audioFilePath)}`);
 
-      // Make API request
-      const response = await axios.post(
-        `${this.baseURL}/audio/transcriptions`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            ...formData.getHeaders()
-          },
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity
-        }
-      );
+      // Call Groq Whisper API
+      const transcription = await this.groq.audio.transcriptions.create({
+        file: fs.createReadStream(audioFilePath),
+        model: 'whisper-large-v3-turbo', // Optimized for speed + quality
+        language: language,
+        prompt: prompt,
+        temperature: temperature,
+        response_format: 'json'
+      });
 
-      logger.info('Audio transcription successful');
+      logger.info('Groq Audio transcription successful');
       
       return {
-        text: response.data.text,
-        language: response.data.language || language,
-        duration: response.data.duration
+        text: transcription.text,
+        language: language,
+        duration: null // Groq standard JSON doesn't always provide duration unless verbose_json
       };
 
     } catch (error) {
-      logger.error('Error transcribing audio:', error.response?.data || error.message);
-      throw new Error('Failed to transcribe audio: ' + (error.response?.data?.error?.message || error.message));
+      logger.error('Error transcribing audio with Groq:', error.message);
+      throw new Error('Failed to transcribe audio: ' + error.message);
     }
   }
 
@@ -74,9 +58,13 @@ class SpeechToTextService {
    */
   async transcribeAudioFromUrl(audioUrl, options = {}) {
     try {
-      // Download audio file
+      // Download audio file with Twilio basic auth
       const response = await axios.get(audioUrl, {
-        responseType: 'arraybuffer'
+        responseType: 'arraybuffer',
+        auth: {
+          username: process.env.TWILIO_ACCOUNT_SID,
+          password: process.env.TWILIO_AUTH_TOKEN
+        }
       });
 
       // Save to temporary file
@@ -94,47 +82,16 @@ class SpeechToTextService {
       const transcription = await this.transcribeAudio(tempFilePath, options);
 
       // Clean up temp file
-      fs.unlinkSync(tempFilePath);
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (err) {
+        logger.warn('Failed to clean up temp audio file:', err.message);
+      }
 
       return transcription;
 
     } catch (error) {
       logger.error('Error transcribing audio from URL:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Transcribe with timestamps (for detailed analysis)
-   */
-  async transcribeWithTimestamps(audioFilePath, options = {}) {
-    try {
-      const formData = new FormData();
-      formData.append('file', fs.createReadStream(audioFilePath));
-      formData.append('model', 'whisper-1');
-      formData.append('response_format', 'verbose_json');
-      formData.append('timestamp_granularities', 'segment');
-
-      const response = await axios.post(
-        `${this.baseURL}/audio/transcriptions`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            ...formData.getHeaders()
-          }
-        }
-      );
-
-      return {
-        text: response.data.text,
-        segments: response.data.segments,
-        language: response.data.language,
-        duration: response.data.duration
-      };
-
-    } catch (error) {
-      logger.error('Error transcribing with timestamps:', error.message);
       throw error;
     }
   }
