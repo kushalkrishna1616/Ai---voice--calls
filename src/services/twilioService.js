@@ -29,6 +29,7 @@ class TwilioService {
     twiml.pause({ length: 1 });
 
     const actionUrl = `${baseUrl}/api/v1/calls/process-speech`;
+    const statusUrl = `${baseUrl}/api/v1/calls/status`;
 
     const gather = twiml.gather({
       input: 'speech',
@@ -39,6 +40,8 @@ class TwilioService {
       language: 'en-IN'
     });
 
+    twiml.statusCallback = statusUrl; // Ensure Twilio notifies us on hangup
+    
     gather.say({
       voice: 'Polly.Aditi',
       language: 'en-IN'

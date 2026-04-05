@@ -43,43 +43,52 @@ const WebCall = () => {
         window.speechSynthesis.speak(utterance);
     };
 
-    // Fresh Engine Spawner on Each Tap to avoid Browser Staleness
+    // Fresh Engine Spawner on Each Tap with "Sticky Mode"
     const startRecognitionInstance = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            console.error("Speech Recognition not supported in this browser.");
-            return null;
-        }
+        if (!SpeechRecognition) return null;
 
         const recognition = new SpeechRecognition();
-        recognition.continuous = true; // Keep listening even during short pauses
-        recognition.interimResults = false;
-        recognition.lang = 'en-IN'; // Optimized for Indian English as per project context
+        recognition.continuous = true;
+        recognition.interimResults = true; // Set to true for more active feedback
+        recognition.lang = 'en-IN';
 
-        recognition.onstart = () => setIsListening(true);
+        let hasProducedResult = false;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+            console.log("Mic Live");
+        };
         
         recognition.onresult = (event) => {
             const lastResultIndex = event.results.length - 1;
             const transcript = event.results[lastResultIndex][0].transcript;
             
             if (event.results[lastResultIndex].isFinal) {
+                hasProducedResult = true;
                 processMessage(transcript);
-                // Once we have a final transcript, stop listening to let AI respond
-                if (recognitionRef.current) recognitionRef.current.stop();
+                recognition.stop();
             }
         };
 
         recognition.onerror = (event) => {
-            console.error("Speech Rec Error:", event.error);
-            if (event.error === 'no-speech') {
-                // If it's just no speech, don't necessarily kill the 'listening' UI immediately
-                // but browser will often trigger onend anyway.
+            console.warn("Speech Rec Error:", event.error);
+            // If it closed immediately due to no-speech, don't kill the UI yet
+            if (event.error === 'no-speech' && !hasProducedResult) {
+                console.log("Sticky Mic: Restarting session...");
+                return; // Let onend handle the restart if needed
             }
             setIsListening(false);
         };
 
         recognition.onend = () => {
-            setIsListening(false);
+            // "Sticky" logic: If the mic closed without a result, and we're still supposed to be listening
+            if (!hasProducedResult && statusRef.current === 'connected' && !isThinking) {
+                 // Briefly setting false ensure UI toggle is possible if needed
+                 setIsListening(false);
+            } else {
+                 setIsListening(false);
+            }
         };
 
         return recognition;
@@ -87,14 +96,18 @@ const WebCall = () => {
 
     const toggleMic = () => {
         if (isListening) {
-            if (recognitionRef.current) recognitionRef.current.stop();
+            if (recognitionRef.current) {
+                recognitionRef.current.onend = null; // Kill the sticky logic on manual stop
+                recognitionRef.current.stop();
+            }
             setIsListening(false);
         } else {
-            window.speechSynthesis.cancel(); // Stop talking to listen
+            window.speechSynthesis.cancel();
             const rec = startRecognitionInstance();
             if (rec) {
                 recognitionRef.current = rec;
-                rec.start();
+                // Add a small 200ms delay to help browser handle audio context switch
+                setTimeout(() => rec.start(), 200);
             }
         }
     };
@@ -118,19 +131,23 @@ const WebCall = () => {
 
     const processMessage = async (content) => {
         if (!content || !content.trim() || isThinking || !callSid) return;
+        
+        // Optimistic UI: Immediately show user's bubble and start thinking
+        const newHistory = [...history, { role: 'user', content: content }];
+        setHistory(newHistory);
         setIsThinking(true);
-        setHistory(prev => [...prev, { role: 'user', content: content }]);
 
         try {
             const response = await callAPI.sendWebMessage({
                 callSid,
                 message: content,
-                history: history 
+                history: newHistory
             });
-            setIsThinking(false);
+            
             if (response.success) {
                 const aiMsg = response.data.message;
                 setHistory(prev => [...prev, { role: 'assistant', content: aiMsg }]);
+                setIsThinking(false);
                 speak(aiMsg);
             }
         } catch (error) {
