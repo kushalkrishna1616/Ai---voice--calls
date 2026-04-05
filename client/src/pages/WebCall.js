@@ -46,20 +46,41 @@ const WebCall = () => {
     // Fresh Engine Spawner on Each Tap to avoid Browser Staleness
     const startRecognitionInstance = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) return null;
+        if (!SpeechRecognition) {
+            console.error("Speech Recognition not supported in this browser.");
+            return null;
+        }
 
         const recognition = new SpeechRecognition();
-        recognition.continuous = false;
+        recognition.continuous = true; // Keep listening even during short pauses
         recognition.interimResults = false;
-        recognition.lang = 'en-US';
+        recognition.lang = 'en-IN'; // Optimized for Indian English as per project context
 
         recognition.onstart = () => setIsListening(true);
+        
         recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            processMessage(transcript);
+            const lastResultIndex = event.results.length - 1;
+            const transcript = event.results[lastResultIndex][0].transcript;
+            
+            if (event.results[lastResultIndex].isFinal) {
+                processMessage(transcript);
+                // Once we have a final transcript, stop listening to let AI respond
+                if (recognitionRef.current) recognitionRef.current.stop();
+            }
         };
-        recognition.onerror = () => setIsListening(false);
-        recognition.onend = () => setIsListening(false);
+
+        recognition.onerror = (event) => {
+            console.error("Speech Rec Error:", event.error);
+            if (event.error === 'no-speech') {
+                // If it's just no speech, don't necessarily kill the 'listening' UI immediately
+                // but browser will often trigger onend anyway.
+            }
+            setIsListening(false);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
 
         return recognition;
     };
